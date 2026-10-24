@@ -1,4 +1,4 @@
-name: Build Debug APK (Unsigned, quick test)
+name: Build Debug APK
 
 on:
   push:
@@ -18,7 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -26,33 +25,68 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # NOT: setup-android@v3 lisansları otomatik kabul etmiyor.
+      # Bu yüzden packages parametresi BOŞ bırakılıyor, lisansları
+      # kendi adımımızda "yes |" ile kabul ediyoruz.
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install dependencies
-        run: npm ci || npm install
+      - name: Accept Android SDK licenses (auto-yes)
+        run: |
+          # Tüm lisansları otomatik kabul et — interaktif y/N sorusunu atla
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          # Gerekli temel paketleri yükle
+          sdkmanager --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools" \
+            > /dev/null 2>&1
+          echo "Android SDK packages installed:"
+          sdkmanager --list_installed | head -20
+
+      - name: Install npm dependencies
+        run: npm install
 
       - name: Build web
         run: npm run build
 
-      - name: Add Android platform (if missing)
+      - name: Add Android platform
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
           fi
+          npx cap sync android
 
-      - name: Sync Capacitor
-        run: npx cap sync android
+      - name: Verify Android project structure
+        run: |
+          echo "=== android/ contents ==="
+          ls -la android/ || true
+          echo "=== android/app/ contents ==="
+          ls -la android/app/ || true
+          echo "=== gradlew exists? ==="
+          test -f android/gradlew && echo "gradlew OK" || echo "gradlew MISSING"
+          echo "=== Java version ==="
+          java -version
+          echo "=== JAVA_HOME ==="
+          echo $JAVA_HOME
 
       - name: Build debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload debug APK
+      - name: Verify APK exists
+        run: |
+          echo "=== APK files ==="
+          find android/app/build/outputs -name "*.apk" -type f || true
+          test -f android/app/build/outputs/apk/debug/app-debug.apk \
+            && echo "APK OK" \
+            || (echo "APK MISSING" && exit 1)
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: yer-imleri-m-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 14
+          retention-days: 30
