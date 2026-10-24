@@ -29,7 +29,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-            - name: Accept Android SDK licenses and install packages
+      - name: Accept Android SDK licenses and install packages
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           echo "Using sdkmanager: $SDKMANAGER"
