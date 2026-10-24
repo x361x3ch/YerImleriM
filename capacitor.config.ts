@@ -6,8 +6,14 @@ const config: CapacitorConfig = {
   appId: 'com.yerimlerim.app',
   appName: 'Yer İmleri M',
   webDir: 'dist',
+  bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
+  },
+  android: {
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
   },
   plugins: {
     StatusBar: {
