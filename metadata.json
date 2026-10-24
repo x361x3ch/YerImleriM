@@ -1,0 +1,8 @@
+{
+  "name": "Yer İmleri M",
+  "description": "Sade liste tabanlı, sınırsız iç içe klasörlü, Flaticon simgeli, özelleştirilebilir temalı yer imi yöneticisi",
+  "version": "4.0.0",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
