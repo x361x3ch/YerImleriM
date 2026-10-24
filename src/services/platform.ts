@@ -56,6 +56,7 @@ export const downloadOrShareFile = async (
       const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
       const { Share } = await import('@capacitor/share');
 
+      // Cache dizinine yaz
       const result = await Filesystem.writeFile({
         path: filename,
         data: content,
@@ -64,6 +65,7 @@ export const downloadOrShareFile = async (
         recursive: true,
       });
 
+      // Paylaş menüsünü aç (kullanıcı istediği yere kaydeder)
       await Share.share({
         title: filename,
         text: filename,
@@ -73,10 +75,11 @@ export const downloadOrShareFile = async (
       return;
     } catch (e) {
       console.warn('Filesystem/Share failed, falling back to web download', e);
+      // Native'de fallback de çalışmayabilir ama deneyelim
     }
   }
 
-  // Web fallback
+  // Web fallback (eski davranış)
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
