@@ -1,4 +1,5 @@
 import { BookmarkEntity, FolderEntity } from '../types';
+import { downloadOrShareFile } from './platform';
 
 function escapeHtml(s: string): string {
   return s
@@ -6,10 +7,6 @@ function escapeHtml(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function escapeJson(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
 export class Exporters {
@@ -43,7 +40,6 @@ export class Exporters {
     }
 
     const writeLevel = (parentId: number | null, indent: string) => {
-      // Write bookmarks in this level
       const bms = (bookmarkByFolder.get(parentId) || []).sort((a, b) => a.sortIndex - b.sortIndex);
       for (const bm of bms) {
         out += `${indent}<DT><A HREF="${escapeHtml(bm.url)}" ADD_DATE="${Math.floor(
@@ -51,7 +47,6 @@ export class Exporters {
         )}">${escapeHtml(bm.title)}</A>\n`;
       }
 
-      // Write subfolders in this level
       const subFolders = (folderChildren.get(parentId) || []).sort((a, b) => a.sortIndex - b.sortIndex);
       for (const f of subFolders) {
         out += `${indent}<DT><H3 ADD_DATE="${Math.floor(f.createdAt / 1000)}" LAST_MODIFIED="${Math.floor(
@@ -139,15 +134,12 @@ export class Exporters {
     return JSON.stringify(data, null, 2);
   }
 
-  static downloadFile(content: string, filename: string, mimeType: string) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  /**
+   * Dosyayı indir / paylaş.
+   * Platform-aware: native'de Filesystem+Share, web'de Blob+a.click().
+   * `async` döndüğü için çağıranlar `await` edebilir ama zorunlu değil.
+   */
+  static async downloadFile(content: string, filename: string, mimeType: string): Promise<void> {
+    await downloadOrShareFile(content, filename, mimeType);
   }
 }
