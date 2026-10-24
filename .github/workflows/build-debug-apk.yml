@@ -5,6 +5,10 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,29 +24,23 @@ jobs:
           node-version: '20'
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # NOT: setup-android@v3 lisansları otomatik kabul etmiyor.
-      # Bu yüzden packages parametresi BOŞ bırakılıyor, lisansları
-      # kendi adımımızda "yes |" ile kabul ediyoruz.
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK licenses (auto-yes)
+      - name: Accept Android SDK licenses and install packages
         run: |
-          # Tüm lisansları otomatik kabul et — interaktif y/N sorusunu atla
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          # Gerekli temel paketleri yükle
-          sdkmanager --install \
-            "platforms;android-34" \
-            "build-tools;34.0.0" \
-            "platform-tools" \
-            > /dev/null 2>&1
-          echo "Android SDK packages installed:"
-          sdkmanager --list_installed | head -20
+          SDKMANAGER=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+          echo "Using sdkmanager: $SDKMANAGER"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found"
+            exit 1
+          fi
+          chmod +x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null 2>&1
+          echo "SDK ready"
 
       - name: Install npm dependencies
         run: npm install
@@ -50,39 +48,23 @@ jobs:
       - name: Build web
         run: npm run build
 
-      - name: Add Android platform
+      - name: Add Android platform and sync
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
           fi
           npx cap sync android
 
-      - name: Verify Android project structure
+      - name: Configure Android SDK path
         run: |
-          echo "=== android/ contents ==="
-          ls -la android/ || true
-          echo "=== android/app/ contents ==="
-          ls -la android/app/ || true
-          echo "=== gradlew exists? ==="
-          test -f android/gradlew && echo "gradlew OK" || echo "gradlew MISSING"
-          echo "=== Java version ==="
-          java -version
-          echo "=== JAVA_HOME ==="
-          echo $JAVA_HOME
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          cat android/local.properties
 
       - name: Build debug APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
-
-      - name: Verify APK exists
-        run: |
-          echo "=== APK files ==="
-          find android/app/build/outputs -name "*.apk" -type f || true
-          test -f android/app/build/outputs/apk/debug/app-debug.apk \
-            && echo "APK OK" \
-            || (echo "APK MISSING" && exit 1)
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
