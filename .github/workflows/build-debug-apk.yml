@@ -29,15 +29,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Accept Android SDK licenses and install packages
+            - name: Accept Android SDK licenses and install packages
         run: |
-          SDKMANAGER=$(find $ANDROID_HOME -name "sdkmanager" -type f 2>/dev/null | head -1)
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           echo "Using sdkmanager: $SDKMANAGER"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "::error::sdkmanager not found"
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager not found or not executable at $SDKMANAGER"
+            ls -la "$ANDROID_HOME/cmdline-tools/" || true
             exit 1
           fi
-          chmod +x "$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
           "$SDKMANAGER" --install "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null 2>&1
           echo "SDK ready"
