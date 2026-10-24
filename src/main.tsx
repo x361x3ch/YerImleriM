@@ -5,8 +5,11 @@ import './index.css';
 import { setupStatusBar } from './services/platform';
 
 // Native'de status bar'ı uygulama temasına göre ayarla.
-// Web'de sessizce no-op.
-setupStatusBar('#2F5BEA', false).catch(() => {});
+// Tema rengi ThemeService'ten geleceği için ilk açılışta default ile başlıyoruz,
+// App.tsx içinde tema değişince tekrar çağrılıyor.
+setupStatusBar('#2F5BEA', false).catch(() => {
+  /* web'de sessizce yut */
+});
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
